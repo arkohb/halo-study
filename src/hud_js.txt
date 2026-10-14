@@ -1,0 +1,840 @@
+/* ================= HUD interactions ================= */
+var RANKS = ['Recruit','Cadet','Specialist','Sergeant','Lieutenant','Commander','Captain','Major','Colonel','Legend'];
+function rankOf(level){ return RANKS[Math.min(RANKS.length-1, Math.max(0, level-1))]; }
+
+function xpPop(x, y, txt, bad){
+  if (reduced()) return;
+  var d = el('div','xp', txt);
+  if (bad) d.style.color = 'var(--no)';
+  d.style.left = (x - 18) + 'px'; d.style.top = (y - 26) + 'px';
+  document.body.appendChild(d);
+  setTimeout(function(){ if (d.parentNode) d.parentNode.removeChild(d); }, 1200);
+}
+function feedback(card, ok, btn){
+  if (!card) return;
+  card.classList.remove('hit','miss');
+  if (ok){
+    card.classList.add('hit');
+    if (btn){ var r = btn.getBoundingClientRect(); xpPop(r.right - 10, r.top, '+10 XP'); }
+  } else {
+    void card.offsetWidth;
+    card.classList.add('miss');
+    setTimeout(function(){ card.classList.remove('miss'); }, 600);
+  }
+}
+
+/* step-by-step reveal of any worked solution */
+function fillSol(sol, label, steps, extraHtml){
+  sol.innerHTML = '';
+  sol.appendChild(el('span','lbl', label));
+  var ol = el('ol'), lis = [];
+  for (var i = 0; i < steps.length; i++){
+    var li = el('li', i === 0 ? '' : 'hid', steps[i]);
+    ol.appendChild(li); lis.push(li);
+  }
+  sol.appendChild(ol);
+  var tail = el('div', null, extraHtml || '');
+  var many = steps.length > 1;
+  if (many && extraHtml) tail.hidden = true;
+  var shown = 1;
+  if (many){
+    var bar = el('div','stepbar');
+    var nextB = el('button','ghost','Next step'); nextB.type = 'button';
+    var allB  = el('button','ghost','Show all');  allB.type  = 'button';
+    var pips = el('div','pips');
+    for (var p = 0; p < steps.length; p++) pips.appendChild(el('i', p === 0 ? 'on' : ''));
+    function paintPips(){
+      var kids = pips.children;
+      for (var k = 0; k < kids.length; k++) kids[k].className = (k < shown ? 'on' : '');
+      nextB.textContent = shown >= steps.length ? 'All steps shown' : 'Next step (' + shown + '/' + steps.length + ')';
+      nextB.disabled = shown >= steps.length;
+      if (shown >= steps.length){ tail.hidden = false; allB.hidden = true; }
+    }
+    function reveal(n){
+      while (shown < n && shown < steps.length){
+        lis[shown].className = 'pop'; shown++;
+      }
+      paintPips();
+    }
+    nextB.addEventListener('click', function(){ reveal(shown + 1); });
+    allB.addEventListener('click', function(){ reveal(steps.length); });
+    bar.appendChild(nextB); bar.appendChild(allB); bar.appendChild(pips);
+    sol.appendChild(bar);
+    paintPips();
+  }
+  sol.appendChild(tail);
+}
+
+/* ================= THE LAB ================= */
+function labCard(title, how){
+  var c = el('div','labcard fadein');
+  c.appendChild(el('h3', null, title));
+  c.appendChild(el('p','how', how));
+  return c;
+}
+function slider(parent, label, min, max, val, step, fn){
+  var row = el('div','labrow');
+  row.appendChild(el('label', null, label));
+  var r = document.createElement('input');
+  r.type = 'range'; r.min = min; r.max = max; r.value = val; r.step = step || 1;
+  var out = el('span','mono', String(val));
+  out.style.minWidth = '42px'; out.style.textAlign = 'right';
+  r.addEventListener('input', function(){ out.textContent = r.value; fn(parseFloat(r.value)); });
+  row.appendChild(r); row.appendChild(out);
+  parent.appendChild(row);
+  return r;
+}
+function gcd(a, b){ a = Math.abs(a); b = Math.abs(b); while (b){ var t = b; b = a % b; a = t; } return a || 1; }
+
+function labNumberLine(){
+  var c = labCard('Directed numbers', 'Slide the two numbers and watch the jumps on the line. Adding moves right, subtracting moves left.');
+  var a = -4, b = 6, out = el('div','labout'), svg = el('div');
+  function draw(){
+    var lo = -20, hi = 20, w = 300, pad = 14;
+    var sx = function(v){ return pad + (v - lo) / (hi - lo) * (w - 2 * pad); };
+    var s = '<svg viewBox="0 0 300 70" class="dia" style="width:100%;max-width:320px">';
+    s += '<line x1="' + pad + '" y1="40" x2="' + (w - pad) + '" y2="40" class="dline"/>';
+    for (var v = lo; v <= hi; v += 5){
+      s += '<line x1="' + sx(v).toFixed(1) + '" y1="35" x2="' + sx(v).toFixed(1) + '" y2="45" class="dline"/>';
+      s += '<text x="' + sx(v).toFixed(1) + '" y="60" class="dmut" text-anchor="middle">' + String(v).replace('-', '−') + '</text>';
+    }
+    var sum = a + b;
+    s += '<line x1="' + sx(a).toFixed(1) + '" y1="40" x2="' + sx(sum).toFixed(1) + '" y2="40" class="dacc" stroke-width="4"/>';
+    s += '<circle cx="' + sx(a).toFixed(1) + '" cy="40" r="5" class="dopenpt"/>';
+    s += '<circle cx="' + sx(sum).toFixed(1) + '" cy="40" r="5" class="dsolidpt"/>';
+    s += '<text x="' + sx(sum).toFixed(1) + '" y="22" class="dtxt" text-anchor="middle">' + String(sum).replace('-', '−') + '</text>';
+    s += '</svg>';
+    svg.innerHTML = s;
+    var A = String(a).replace('-', '−'), B = String(b).replace('-', '−');
+    out.innerHTML = '(' + A + ') + (' + B + ') = <b>' + String(a + b).replace('-', '−') + '</b><br>'
+      + '(' + A + ') − (' + B + ') = <b>' + String(a - b).replace('-', '−') + '</b><br>'
+      + '(' + A + ') × (' + B + ') = <b>' + String(a * b).replace('-', '−') + '</b>'
+      + '<br><span style="color:var(--ink-2)">' + (b < 0 ? 'Adding a negative moves LEFT.' : 'Adding a positive moves RIGHT.') + '</span>';
+  }
+  slider(c, 'First number', -15, 15, a, 1, function(v){ a = v; draw(); });
+  slider(c, 'Second number', -15, 15, b, 1, function(v){ b = v; draw(); });
+  c.appendChild(svg); c.appendChild(out); draw();
+  return c;
+}
+
+function labFractions(){
+  var c = labCard('Fraction bars', 'Build two fractions and see them as bars. The app compares them and adds them for you.');
+  var n1 = 2, d1 = 3, n2 = 1, d2 = 4;
+  var b1 = el('div','fbar','<i></i><span></span>'), b2 = el('div','fbar','<i></i><span></span>');
+  var out = el('div','labout');
+  function draw(){
+    var v1 = n1 / d1, v2 = n2 / d2;
+    b1.querySelector('i').style.width = Math.min(100, v1 * 100) + '%';
+    b2.querySelector('i').style.width = Math.min(100, v2 * 100) + '%';
+    b1.querySelector('span').textContent = n1 + '/' + d1 + '  =  ' + v1.toFixed(3) + '  =  ' + (v1 * 100).toFixed(1) + '%';
+    b2.querySelector('span').textContent = n2 + '/' + d2 + '  =  ' + v2.toFixed(3) + '  =  ' + (v2 * 100).toFixed(1) + '%';
+    var sn = n1 * d2 + n2 * d1, sd = d1 * d2, g = gcd(sn, sd);
+    var sign = v1 > v2 ? '&gt;' : (v1 < v2 ? '&lt;' : '=');
+    out.innerHTML = n1 + '/' + d1 + ' <b>' + sign + '</b> ' + n2 + '/' + d2
+      + '<br>sum = ' + sn + '/' + sd + ' = <b>' + (sn / g) + '/' + (sd / g) + '</b>'
+      + (sn / g >= sd / g ? ' = ' + Math.floor(sn / sd) + ' ' + (sn % sd ? ((sn % sd) / g) + '/' + (sd / g) : '') : '')
+      + '<br><span style="color:var(--ink-2)">L.C.M. of ' + d1 + ' and ' + d2 + ' is ' + (d1 * d2 / gcd(d1, d2)) + '</span>';
+  }
+  slider(c, 'Numerator 1', 1, 12, n1, 1, function(v){ n1 = v; draw(); });
+  slider(c, 'Denominator 1', 1, 12, d1, 1, function(v){ d1 = v; draw(); });
+  c.appendChild(b1);
+  slider(c, 'Numerator 2', 1, 12, n2, 1, function(v){ n2 = v; draw(); });
+  slider(c, 'Denominator 2', 1, 12, d2, 1, function(v){ d2 = v; draw(); });
+  c.appendChild(b2); c.appendChild(out); draw();
+  return c;
+}
+
+function labVenn(){
+  var c = labCard('Venn builder', 'Type the numbers from any two-set word problem. Fill the overlap first — the app does the subtraction.');
+  var nA = 25, nB = 18, both = 7, tot = 40;
+  var pic = el('div'), out = el('div','labout');
+  function num(label, val, fn){
+    var row = el('div','labrow');
+    row.appendChild(el('label', null, label));
+    var i = document.createElement('input');
+    i.type = 'number'; i.className = 'labnum'; i.value = val; i.min = 0;
+    i.addEventListener('input', function(){ fn(parseInt(i.value, 10) || 0); });
+    row.appendChild(i); c.appendChild(row);
+  }
+  function draw(){
+    var onlyA = nA - both, onlyB = nB - both, atLeast = onlyA + both + onlyB, neither = tot - atLeast;
+    var bad = onlyA < 0 || onlyB < 0 || neither < 0;
+    pic.innerHTML = '<svg viewBox="0 0 300 170" class="dia" style="width:100%;max-width:320px">'
+      + '<rect x="6" y="6" width="288" height="158" class="dbox"/>'
+      + '<circle cx="115" cy="88" r="62" class="dfill" fill-opacity="0.22"/>'
+      + '<circle cx="185" cy="88" r="62" class="dfill" fill-opacity="0.22"/>'
+      + '<text x="78" y="94" class="dtxt" text-anchor="middle">' + onlyA + '</text>'
+      + '<text x="150" y="94" class="dtxt" text-anchor="middle">' + both + '</text>'
+      + '<text x="222" y="94" class="dtxt" text-anchor="middle">' + onlyB + '</text>'
+      + '<text x="60" y="30" class="dmut" text-anchor="middle">A</text>'
+      + '<text x="240" y="30" class="dmut" text-anchor="middle">B</text>'
+      + '<text x="270" y="156" class="dmut" text-anchor="end">neither ' + neither + '</text>'
+      + '</svg>';
+    out.innerHTML = bad
+      ? '<b style="color:var(--no)">Those numbers cannot all be true.</b><br>Check that the overlap is not bigger than either set, and that the total is big enough.'
+      : 'A only = ' + nA + ' − ' + both + ' = <b>' + onlyA + '</b><br>'
+        + 'B only = ' + nB + ' − ' + both + ' = <b>' + onlyB + '</b><br>'
+        + 'n(A ∪ B) = ' + nA + ' + ' + nB + ' − ' + both + ' = <b>' + atLeast + '</b><br>'
+        + 'neither = ' + tot + ' − ' + atLeast + ' = <b>' + neither + '</b>';
+  }
+  num('n(A)', nA, function(v){ nA = v; draw(); });
+  num('n(B)', nB, function(v){ nB = v; draw(); });
+  num('Both', both, function(v){ both = v; draw(); });
+  num('Total', tot, function(v){ tot = v; draw(); });
+  c.appendChild(pic); c.appendChild(out); draw();
+  return c;
+}
+
+function labSpinner(){
+  var c = labCard('Probability spinner', 'Set how many beads of each colour, then spin. Watch the experimental result settle towards the theoretical probability.');
+  var cnt = [3, 5, 2], names = ['Red','Blue','Green'], cols = ['#E0543C','#3C7FE0','#2FB37A'];
+  var tally = [0, 0, 0], wheel = el('div','spinner'), out = el('div','labout'), tal = el('div','tally');
+  var angle = 0;
+  function paintWheel(){
+    var tot = cnt[0] + cnt[1] + cnt[2];
+    if (!tot){ wheel.style.background = 'var(--panel)'; return; }
+    var a = 0, parts = [];
+    for (var i = 0; i < 3; i++){
+      var frac = cnt[i] / tot, b = a + frac * 360;
+      parts.push(cols[i] + ' ' + a.toFixed(1) + 'deg ' + b.toFixed(1) + 'deg');
+      a = b;
+    }
+    wheel.style.background = 'conic-gradient(' + parts.join(',') + ')';
+  }
+  function paintOut(pickIdx){
+    var tot = cnt[0] + cnt[1] + cnt[2], spins = tally[0] + tally[1] + tally[2];
+    var s = '';
+    if (pickIdx != null) s += 'Landed on <b>' + names[pickIdx] + '</b><br>';
+    for (var i = 0; i < 3; i++){
+      if (!cnt[i]) continue;
+      var th = tot ? (cnt[i] / tot) : 0;
+      var ex = spins ? (tally[i] / spins) : 0;
+      s += names[i] + ': P = ' + cnt[i] + '/' + tot + ' = ' + th.toFixed(2)
+         + '  |  got ' + tally[i] + '/' + spins + (spins ? ' = ' + ex.toFixed(2) : '') + '<br>';
+    }
+    out.innerHTML = s || 'Add some beads first.';
+    tal.innerHTML = '<span>spins: ' + spins + '</span>';
+  }
+  for (var i = 0; i < 3; i++){
+    (function(k){
+      slider(c, names[k] + ' beads', 0, 10, cnt[k], 1, function(v){ cnt[k] = v; paintWheel(); paintOut(null); });
+    })(i);
+  }
+  wheel.style.cursor = 'pointer';
+  c.appendChild(el('div','needle'));
+  c.appendChild(wheel);
+  var go = el('button','btn','Spin'); go.type = 'button';
+  go.addEventListener('click', function(){
+    var tot = cnt[0] + cnt[1] + cnt[2];
+    if (!tot) return;
+    var r = Math.random() * tot, acc = 0, pick = 0;
+    for (var i = 0; i < 3; i++){ acc += cnt[i]; if (r < acc){ pick = i; break; } }
+    tally[pick]++;
+    angle += 720 + Math.random() * 360;
+    if (!reduced()) wheel.style.transform = 'rotate(' + angle + 'deg)';
+    paintOut(pick);
+  });
+  wheel.addEventListener('click', function(){ go.click(); });
+  var row = el('div','labrow'); row.appendChild(go);
+  var rst = el('button','ghost','Reset tally'); rst.type = 'button';
+  rst.addEventListener('click', function(){ tally = [0,0,0]; paintOut(null); });
+  row.appendChild(rst); row.appendChild(tal);
+  c.appendChild(row); c.appendChild(out);
+  paintWheel(); paintOut(null);
+  return c;
+}
+
+function labSpeed(){
+  var c = labCard('Speed, distance & time', 'Move the sliders. The formula triangle is worked out for you, in km/h and in m/s.');
+  var d = 180, t = 3, out = el('div','labout');
+  function draw(){
+    var kmh = d / t, ms = kmh * 1000 / 3600;
+    out.innerHTML = 'speed = distance ÷ time = ' + d + ' ÷ ' + t + ' = <b>' + kmh.toFixed(1) + ' km/h</b><br>'
+      + 'in m/s: ' + kmh.toFixed(1) + ' × 1000 ÷ 3600 = <b>' + ms.toFixed(2) + ' m/s</b><br>'
+      + 'in 30 minutes it would cover <b>' + (kmh * 0.5).toFixed(1) + ' km</b><br>'
+      + '<span style="color:var(--ink-2)">to cover 100 km it needs ' + (100 / kmh).toFixed(2) + ' h</span>';
+  }
+  slider(c, 'Distance (km)', 5, 400, d, 5, function(v){ d = v; draw(); });
+  slider(c, 'Time (hours)', 0.5, 8, t, 0.5, function(v){ t = v; draw(); });
+  c.appendChild(out); draw();
+  return c;
+}
+
+function labCircuit(){
+  var c = labCard('Series or parallel?', 'Tap a lamp to blow its filament, then switch between series and parallel to see what happens.');
+  var mode = 'series', blown = [false, false, false];
+  var box = el('div','lamps'), out = el('div','labout');
+  function draw(){
+    box.innerHTML = '';
+    var anyBlown = blown[0] || blown[1] || blown[2];
+    for (var i = 0; i < 3; i++){
+      (function(k){
+        var lit = (mode === 'series') ? !anyBlown : !blown[k];
+        var l = el('div','lamp' + (lit ? ' lit' : '') + (blown[k] ? ' blown' : ''), lit ? '☀' : '○');
+        l.title = blown[k] ? 'Blown — tap to replace' : 'Working — tap to blow';
+        l.style.cursor = 'pointer';
+        l.addEventListener('click', function(){ blown[k] = !blown[k]; draw(); });
+        box.appendChild(l);
+      })(i);
+    }
+    out.innerHTML = '<b>' + (mode === 'series' ? 'Series' : 'Parallel') + '</b> — '
+      + (mode === 'series'
+          ? (anyBlown ? 'one lamp has blown, so the single path is broken and <b>all the lamps go out</b>.'
+                      : 'one path only; the same current passes through every lamp.')
+          : (anyBlown ? 'each lamp has its own path, so <b>only the blown lamp goes out</b>.'
+                      : 'separate branches; the current divides between them.'))
+      + '<br><span style="color:var(--ink-2)">House wiring is parallel, for exactly this reason.</span>';
+  }
+  var row = el('div','labrow');
+  var seg = el('div','seg');
+  [['series','Series'],['parallel','Parallel']].forEach(function(p){
+    var b = el('button', null, p[1]); b.type = 'button';
+    b.setAttribute('aria-pressed', mode === p[0] ? 'true' : 'false');
+    b.addEventListener('click', function(){
+      mode = p[0];
+      var kids = seg.children;
+      for (var k = 0; k < kids.length; k++) kids[k].setAttribute('aria-pressed', 'false');
+      b.setAttribute('aria-pressed','true');
+      draw();
+    });
+    seg.appendChild(b);
+  });
+  row.appendChild(seg);
+  var fix = el('button','ghost','Replace all lamps'); fix.type = 'button';
+  fix.addEventListener('click', function(){ blown = [false,false,false]; draw(); });
+  row.appendChild(fix);
+  c.appendChild(row); c.appendChild(box); c.appendChild(out); draw();
+  return c;
+}
+
+function labBinary(){
+  var c = labCard('Binary switches', 'Each switch is one bit. Tap them to build a number, or take the challenge.');
+  var bits = [0,0,0,0,0,0,0,0];   /* 128 ... 1 */
+  var row = el('div','bits'), out = el('div','labout'), target = null;
+  function val(){ var v = 0; for (var i = 0; i < 8; i++) v += bits[i] * (1 << (7 - i)); return v; }
+  function draw(){
+    row.innerHTML = '';
+    for (var i = 0; i < 8; i++){
+      (function(k){
+        var b = el('button','bit' + (bits[k] ? ' on' : ''), bits[k] + '<small>' + (1 << (7 - k)) + '</small>');
+        b.type = 'button';
+        b.addEventListener('click', function(){ bits[k] = bits[k] ? 0 : 1; draw(); });
+        row.appendChild(b);
+      })(i);
+    }
+    var v = val(), s = '';
+    for (var j = 0; j < 8; j++) s += bits[j];
+    out.innerHTML = 'binary <b>' + s + '</b> = ' + bits.map(function(b, i){ return b ? (1 << (7 - i)) : 0; })
+        .filter(function(x){ return x; }).join(' + ') + (v ? ' = ' : '') + '<b>' + v + '</b>'
+      + (target != null
+          ? '<br>Target: <b>' + target + '</b> — ' + (v === target
+              ? '<span style="color:var(--ok)">correct!</span>'
+              : (v < target ? 'too small' : 'too big'))
+          : '');
+    if (target != null && v === target){ target = null; }
+  }
+  c.appendChild(row);
+  var rowb = el('div','labrow');
+  var ch = el('button','btn','Challenge me'); ch.type = 'button';
+  ch.addEventListener('click', function(){
+    target = 1 + Math.floor(Math.random() * 254);
+    bits = [0,0,0,0,0,0,0,0]; draw();
+  });
+  var cl = el('button','ghost','Clear'); cl.type = 'button';
+  cl.addEventListener('click', function(){ bits = [0,0,0,0,0,0,0,0]; draw(); });
+  rowb.appendChild(ch); rowb.appendChild(cl);
+  c.appendChild(rowb); c.appendChild(out); draw();
+  return c;
+}
+
+function labWords(){
+  var SENT = [
+    ['Neither', 'the', 'boys', 'nor', 'their', 'teacher', 'was', 'present'],
+    ['One', 'of', 'the', 'girls', 'has', 'lost', 'her', 'bag'],
+    ['Although', 'it', 'rained', 'heavily', 'we', 'went', 'to', 'school'],
+    ['The', 'box', 'of', 'pencils', 'is', 'on', 'the', 'table'],
+    ['He', 'asked', 'me', 'whether', 'I', 'had', 'finished', 'the', 'work']
+  ];
+  var c = labCard('Sentence builder', 'Tap the words in the correct order. These are the concord and structure patterns the examiners test most.');
+  var idx = 0, picked = [], pool = [], line = el('div','wline'), box = el('div','words'), out = el('div','labout');
+  function shuffle(a){
+    a = a.slice();
+    for (var i = a.length - 1; i > 0; i--){ var j = Math.floor(Math.random() * (i + 1)), t = a[i]; a[i] = a[j]; a[j] = t; }
+    return a;
+  }
+  function load(){
+    picked = []; pool = shuffle(SENT[idx]); draw();
+  }
+  function draw(){
+    line.textContent = picked.join(' ') || '…';
+    box.innerHTML = '';
+    var used = {};
+    picked.forEach(function(w){ used[w] = (used[w] || 0) + 1; });
+    var seen = {};
+    pool.forEach(function(w, i){
+      seen[w] = (seen[w] || 0) + 1;
+      var isUsed = seen[w] <= (used[w] || 0);
+      var b = el('button','wtok' + (isUsed ? ' used' : ''), w); b.type = 'button';
+      b.addEventListener('click', function(){ picked.push(w); draw(); });
+      box.appendChild(b);
+    });
+    if (picked.length === SENT[idx].length){
+      var ok = picked.join(' ') === SENT[idx].join(' ');
+      out.innerHTML = ok ? '<b style="color:var(--ok)">Correct.</b> ' + SENT[idx].join(' ') + '.'
+                         : '<b style="color:var(--no)">Not yet.</b> Try again — look at which verb form fits the subject.';
+      if (ok && !reduced()) line.style.borderColor = 'var(--ok)';
+    } else {
+      out.innerHTML = '<span style="color:var(--ink-2)">' + picked.length + ' of ' + SENT[idx].length + ' words placed.</span>';
+      line.style.borderColor = 'var(--accent)';
+    }
+  }
+  c.appendChild(line); c.appendChild(box);
+  var row = el('div','labrow');
+  var again = el('button','ghost','Start over'); again.type = 'button';
+  again.addEventListener('click', function(){ picked = []; draw(); });
+  var next = el('button','btn','Next sentence'); next.type = 'button';
+  next.addEventListener('click', function(){ idx = (idx + 1) % SENT.length; load(); });
+  row.appendChild(next); row.appendChild(again);
+  c.appendChild(row); c.appendChild(out); load();
+  return c;
+}
+
+function labTriangle(){
+  var c = labCard('Pythagoras explorer', 'Change the two shorter sides and watch the hypotenuse, the squares and the area change.');
+  var a = 6, b = 8, pic = el('div'), out = el('div','labout');
+  function draw(){
+    var h = Math.sqrt(a * a + b * b);
+    var k = 110 / Math.max(a, b), ax = a * k, by = b * k;
+    pic.innerHTML = '<svg viewBox="0 0 300 170" class="dia" style="width:100%;max-width:320px">'
+      + '<polygon points="40,150 ' + (40 + by).toFixed(1) + ',150 40,' + (150 - ax).toFixed(1) + '" class="dfill" fill-opacity="0.25"/>'
+      + '<polyline points="40,150 ' + (40 + by).toFixed(1) + ',150 40,' + (150 - ax).toFixed(1) + ' 40,150" class="dacc"/>'
+      + '<polyline points="56,150 56,134 40,134" class="dline"/>'
+      + '<text x="' + (40 + by / 2).toFixed(1) + '" y="165" class="dmut" text-anchor="middle">' + b + '</text>'
+      + '<text x="28" y="' + (150 - ax / 2).toFixed(1) + '" class="dmut" text-anchor="middle">' + a + '</text>'
+      + '<text x="' + (54 + by / 2).toFixed(1) + '" y="' + (144 - ax / 2).toFixed(1) + '" class="dtxt">' + h.toFixed(2) + '</text>'
+      + '</svg>';
+    out.innerHTML = 'h² = ' + a + '² + ' + b + '² = ' + (a * a) + ' + ' + (b * b) + ' = ' + (a * a + b * b)
+      + '<br>h = √' + (a * a + b * b) + ' = <b>' + h.toFixed(3) + '</b>'
+      + '<br>area of the triangle = ½ × ' + a + ' × ' + b + ' = <b>' + (a * b / 2) + '</b>'
+      + (Math.abs(h - Math.round(h)) < 1e-9 ? '<br><span style="color:var(--ok)">' + a + ', ' + b + ', ' + h + ' is a Pythagorean triple.</span>' : '');
+  }
+  slider(c, 'Side a', 1, 20, a, 1, function(v){ a = v; draw(); });
+  slider(c, 'Side b', 1, 20, b, 1, function(v){ b = v; draw(); });
+  c.appendChild(pic); c.appendChild(out); draw();
+  return c;
+}
+
+var LAB_SECTIONS = [
+  ['Mathematics', 'Move the controls and watch the numbers and the graph answer back.',
+   [labPlot, labNumberLine, labFractions, labTriangle, labVenn, labSpeed, labSpinner]],
+  ['Science practicals', 'The experiments you are asked to describe in Paper 2 \u2014 run them here first.',
+   [labLitmus, labSeparate, labFoodTest, labStates, labPhoto, labRays, labCircuit]],
+  ['Computing and English', 'Build a number out of bits, and a sentence out of its words.',
+   [labBinary, labWords]]
+];
+
+function drawLab(){
+  var v = document.getElementById('view-lab');
+  if (v.dataset.built) return;
+  v.innerHTML = '';
+  var n = 0;
+  LAB_SECTIONS.forEach(function(s){ n += s[2].length; });
+  var head = el('div','card pad fadein');
+  head.innerHTML = '<h2 style="font-size:22px">The Lab</h2>'
+    + '<p class="note" style="margin:8px 0 0">' + n + ' hands-on tools for the ideas that are hard to picture. '
+    + 'Nothing here is marked \u2014 move the controls, make a prediction, then check whether you were right. '
+    + 'Everything works offline.</p>';
+  v.appendChild(head);
+  LAB_SECTIONS.forEach(function(sec){
+    v.appendChild(el('div','sechead','<h3>' + sec[0] + '</h3><span class="note">' + sec[1] + '</span>'));
+    var grid = el('div','labgrid');
+    sec[2].forEach(function(f){ try { grid.appendChild(f()); } catch(e){} });
+    v.appendChild(grid);
+  });
+  v.dataset.built = '1';
+}
+
+/* ================= science practicals & graphs ================= */
+function svgBox(w, h, body, extra){
+  return '<svg viewBox="0 0 ' + w + ' ' + h + '" class="dia" style="width:100%;max-width:' +
+         (extra || 340) + 'px">' + body + '</svg>';
+}
+
+function labLitmus(){
+  var SUB = [
+    {n:'Lemon juice', ph:2, k:'acid'}, {n:'Vinegar', ph:3, k:'acid'},
+    {n:'Rain water', ph:6, k:'acid'}, {n:'Pure water', ph:7, k:'neutral'},
+    {n:'Common salt solution', ph:7, k:'neutral'}, {n:'Toothpaste', ph:9, k:'base'},
+    {n:'Wood ash water', ph:11, k:'base'}, {n:'Lime water', ph:12, k:'base'},
+    {n:'Caustic soda', ph:13, k:'base'}
+  ];
+  var c = labCard('Litmus &amp; the pH scale',
+    'Pick a substance, dip the papers and watch. This is the test you will be asked to describe in the exam.');
+  var i = 0, pic = el('div'), out = el('div','labout');
+  function colourFor(k, paper){
+    if (k === 'acid') return paper === 'blue' ? '#D03A2B' : '#D03A2B';
+    if (k === 'base') return '#2E6FC0';
+    return paper === 'blue' ? '#2E6FC0' : '#D03A2B';
+  }
+  function draw(){
+    var s = SUB[i];
+    var blue = colourFor(s.k, 'blue'), red = colourFor(s.k, 'red');
+    var px = 24 + (s.ph + 0.5) * ((300 - 24) / 15);
+    var body = ''
+      + '<rect x="16" y="16" width="86" height="96" rx="8" class="dbox"/>'
+      + '<rect x="22" y="56" width="74" height="52" rx="6" class="dfill"/>'
+      + '<text x="59" y="40" class="dmut" text-anchor="middle">' + s.n + '</text>'
+      + '<rect x="120" y="30" width="26" height="70" rx="4" fill="' + blue + '"/>'
+      + '<text x="133" y="118" class="dmut" text-anchor="middle">blue</text>'
+      + '<rect x="160" y="30" width="26" height="70" rx="4" fill="' + red + '"/>'
+      + '<text x="173" y="118" class="dmut" text-anchor="middle">red</text>';
+    var cols = ['#D03A2B','#E0603A','#E89A3C','#E8C83C','#BFD040','#6FC06A','#3BAF7A','#2FA8A0',
+                '#2E8FB8','#2E6FC0','#3A52B8','#4A3FAE','#5A33A0','#6B2A92','#7A2288'];
+    var bw = (300 - 24) / 15;
+    for (var k = 0; k < 15; k++){
+      body += '<rect x="' + (24 + k * bw).toFixed(1) + '" y="140" width="' + (bw + 0.6).toFixed(1) +
+              '" height="20" fill="' + cols[k] + '"/>';
+      if (k % 2 === 0) body += '<text x="' + (24 + k * bw + bw / 2).toFixed(1) +
+              '" y="176" class="dmut" text-anchor="middle" style="font-size:9px">' + k + '</text>';
+    }
+    body += '<polygon points="' + (px - 8).toFixed(1) + ',132 ' + (px + 8).toFixed(1) + ',132 ' +
+            px.toFixed(1) + ',144" class="dsolidpt"/>';
+    pic.innerHTML = svgBox(316, 190, body, 340);
+    var verdict = s.k === 'acid'
+      ? 'ACID: blue litmus turns <b>red</b>, red stays red. pH ' + s.ph + ' (below 7).'
+      : (s.k === 'base'
+         ? 'BASE: red litmus turns <b>blue</b>, blue stays blue. pH ' + s.ph + ' (above 7).'
+         : 'NEUTRAL: neither paper changes. pH 7.');
+    out.innerHTML = verdict + '<br><span style="color:var(--ink-2)">Acid + base → salt + water. '
+      + 'That is why ' + (s.k === 'base' ? 'lime is spread on sour soil.' : 'an antacid settles heartburn.')
+      + '</span>';
+  }
+  var row = el('div','labrow');
+  var sel = document.createElement('select');
+  sel.className = 'labnum'; sel.style.width = 'auto';
+  for (var j = 0; j < SUB.length; j++){
+    var o = document.createElement('option'); o.value = j; o.textContent = SUB[j].n; sel.appendChild(o);
+  }
+  sel.addEventListener('change', function(){ i = parseInt(sel.value, 10); draw(); });
+  row.appendChild(el('label', null, 'Substance')); row.appendChild(sel);
+  c.appendChild(row); c.appendChild(pic); c.appendChild(out); draw();
+  return c;
+}
+
+function labSeparate(){
+  var MIX = [
+    {n:'Sand and water', ok:'filtration', why:'Sand is insoluble, so filter paper traps it as the residue.'},
+    {n:'Salt and water', ok:'evaporation', why:'The salt is dissolved, so boil the water off and the salt stays.'},
+    {n:'Iron filings and sulphur', ok:'magnet', why:'Iron is magnetic and sulphur is not.'},
+    {n:'Pure water from sea water', ok:'distillation', why:'Boil, then condense the steam — the salts stay behind.'},
+    {n:'Oil and water', ok:'decanting', why:'They do not mix; the oil floats, so pour off one layer.'},
+    {n:'Colours in ink', ok:'chromatography', why:'The dyes travel different distances up the paper.'}
+  ];
+  var METH = ['filtration','evaporation','magnet','distillation','decanting','chromatography'];
+  var c = labCard('Separating mixtures',
+    'Choose a mixture, then choose the method. The app tells you whether the property you used was the right one.');
+  var m = 0, pic = el('div'), out = el('div','labout');
+  function picture(meth){
+    if (meth === 'filtration')
+      return '<polygon points="96,30 204,30 156,96 144,96" class="dbox"/>'
+           + '<polygon points="104,36 196,36 152,90 148,90" class="dfill"/>'
+           + '<rect x="144" y="96" width="12" height="22" class="dbox"/>'
+           + '<path d="M112,122 L112,168 Q150,178 188,168 L188,122 Z" class="dbox"/>'
+           + '<path d="M112,146 L112,168 Q150,178 188,168 L188,146 Z" class="dfill"/>';
+    if (meth === 'evaporation')
+      return '<path d="M96,80 Q150,124 204,80 Z" class="dbox"/>'
+           + '<path d="M104,84 Q150,114 196,84 Z" class="dfill"/>'
+           + '<polygon points="140,140 160,140 150,124" class="dfill dpulse"/>'
+           + '<circle cx="128" cy="66" r="5" class="dsolidpt drise"/>'
+           + '<circle cx="152" cy="62" r="5" class="dsolidpt drise" style="animation-delay:-.8s"/>'
+           + '<circle cx="176" cy="66" r="5" class="dsolidpt drise" style="animation-delay:-1.5s"/>';
+    if (meth === 'magnet')
+      return '<rect x="56" y="54" width="38" height="72" rx="8" class="dfill"/>'
+           + '<rect x="196" y="54" width="44" height="72" rx="8" class="dbox"/>'
+           + '<circle cx="120" cy="76" r="5" class="dsolidpt dmarch"/>'
+           + '<circle cx="140" cy="96" r="5" class="dsolidpt dmarch"/>'
+           + '<circle cx="160" cy="112" r="5" class="dsolidpt dmarch"/>';
+    if (meth === 'distillation')
+      return '<path d="M46,110 Q80,150 114,110 Z" class="dbox"/>'
+           + '<path d="M52,114 Q80,140 108,114 Z" class="dfill"/>'
+           + '<rect x="80" y="62" width="10" height="50" class="dbox"/>'
+           + '<rect x="90" y="58" width="120" height="16" rx="8" class="dfill dmarch"/>'
+           + '<path d="M208,74 L208,120 Q234,132 256,120 L256,74 Z" class="dbox"/>'
+           + '<path d="M208,100 L208,120 Q234,132 256,120 L256,100 Z" class="dfill"/>';
+    if (meth === 'decanting')
+      return '<path d="M80,40 L120,40 L116,150 L84,150 Z" class="dbox"/>'
+           + '<path d="M83,70 L117,70 L116,150 L84,150 Z" class="dfill"/>'
+           + '<path d="M180,60 L240,60 L234,150 L186,150 Z" class="dbox"/>'
+           + '<path d="M184,100 L236,100 L234,150 L186,150 Z" class="dfill"/>'
+           + '<path d="M122,56 Q160,40 184,70" class="dacc dmarch" fill="none"/>';
+    return '<rect x="110" y="24" width="80" height="130" rx="4" class="dbox"/>'
+         + '<circle cx="150" cy="138" r="6" class="dsolidpt"/>'
+         + '<rect x="130" y="52" width="40" height="10" rx="4" class="dfill dpulse"/>'
+         + '<rect x="130" y="78" width="40" height="10" rx="4" class="dfill dpulse" style="animation-delay:-.6s"/>'
+         + '<rect x="130" y="104" width="40" height="10" rx="4" class="dfill dpulse" style="animation-delay:-1.2s"/>';
+  }
+  function show(meth){
+    var mix = MIX[m];
+    pic.innerHTML = svgBox(300, 180, picture(meth || mix.ok), 320);
+    if (!meth){
+      out.innerHTML = '<span style="color:var(--ink-2)">Choose a method for <b>' + mix.n + '</b>.</span>';
+      return;
+    }
+    out.innerHTML = (meth === mix.ok)
+      ? '<b style="color:var(--ok)">Correct.</b> ' + mix.why
+      : '<b style="color:var(--no)">Not that one.</b> ' + meth + ' uses a property these two do not differ in. '
+        + 'Think again: what IS different about them?';
+  }
+  var row1 = el('div','labrow');
+  var sel = document.createElement('select'); sel.className = 'labnum'; sel.style.width = 'auto';
+  for (var j = 0; j < MIX.length; j++){
+    var o = document.createElement('option'); o.value = j; o.textContent = MIX[j].n; sel.appendChild(o);
+  }
+  sel.addEventListener('change', function(){ m = parseInt(sel.value, 10); show(null); });
+  row1.appendChild(el('label', null, 'Mixture')); row1.appendChild(sel);
+  c.appendChild(row1);
+  var row2 = el('div','labrow');
+  METH.forEach(function(meth){
+    var b = el('button','ghost', meth); b.type = 'button';
+    b.addEventListener('click', function(){ show(meth); });
+    row2.appendChild(b);
+  });
+  c.appendChild(row2); c.appendChild(pic); c.appendChild(out); show(null);
+  return c;
+}
+
+function labFoodTest(){
+  var FOOD = [
+    {n:'Bread', starch:true, sugar:false, fat:false, prot:false},
+    {n:'Ripe pawpaw', starch:false, sugar:true, fat:false, prot:false},
+    {n:'Groundnut', starch:false, sugar:false, fat:true, prot:true},
+    {n:'Boiled egg white', starch:false, sugar:false, fat:false, prot:true},
+    {n:'Gari', starch:true, sugar:false, fat:false, prot:false}
+  ];
+  var c = labCard('Food tests',
+    'Pick a food, then run a test. Learn the colour change and what it proves — a favourite practical question.');
+  var f = 0, pic = el('div'), out = el('div','labout');
+  function run(test){
+    var food = FOOD[f], pos, colour, says;
+    if (test === 'iodine'){ pos = food.starch; colour = pos ? '#1B2A6B' : '#9A6B06';
+      says = pos ? 'blue-black → <b>starch present</b>' : 'stays brown → no starch'; }
+    else if (test === 'benedict'){ pos = food.sugar; colour = pos ? '#C2402D' : '#2E8FB8';
+      says = pos ? 'brick-red after heating → <b>reducing sugar present</b>' : 'stays blue → no reducing sugar'; }
+    else if (test === 'grease'){ pos = food.fat; colour = pos ? '#D9C89A' : '#F1EADA';
+      says = pos ? 'permanent translucent spot → <b>fat present</b>' : 'the paper dries clear → no fat'; }
+    else { pos = food.prot; colour = pos ? '#7A2288' : '#2E6FC0';
+      says = pos ? 'purple → <b>protein present</b>' : 'stays blue → no protein'; }
+    pic.innerHTML = svgBox(300, 160,
+      '<path d="M110,20 L190,20 L178,130 Q150,142 122,130 Z" class="dbox"/>'
+      + '<path d="M118,74 L182,74 L178,130 Q150,142 122,130 Z" fill="' + colour + '" opacity="0.85"/>'
+      + '<text x="150" y="152" class="dmut" text-anchor="middle">' + FOOD[f].n + ' + '
+      + (test === 'iodine' ? 'iodine solution' : test === 'benedict' ? "Benedict's solution, heated"
+         : test === 'grease' ? 'rubbed on paper' : 'biuret reagent') + '</text>', 300);
+    out.innerHTML = 'Result: ' + says + '.<br><span style="color:var(--ink-2)">'
+      + (pos ? 'Record the colour change AND what it proves — both carry marks.'
+             : 'A negative result is still a result: write what you saw.') + '</span>';
+  }
+  var row1 = el('div','labrow');
+  var sel = document.createElement('select'); sel.className = 'labnum'; sel.style.width = 'auto';
+  for (var j = 0; j < FOOD.length; j++){
+    var o = document.createElement('option'); o.value = j; o.textContent = FOOD[j].n; sel.appendChild(o);
+  }
+  sel.addEventListener('change', function(){ f = parseInt(sel.value, 10); out.innerHTML = 'Now choose a test.'; });
+  row1.appendChild(el('label', null, 'Food')); row1.appendChild(sel);
+  c.appendChild(row1);
+  var row2 = el('div','labrow');
+  [['iodine','Iodine (starch)'], ['benedict',"Benedict's (sugar)"], ['grease','Grease spot (fat)'],
+   ['biuret','Biuret (protein)']].forEach(function(p){
+    var b = el('button','ghost', p[1]); b.type = 'button';
+    b.addEventListener('click', function(){ run(p[0]); });
+    row2.appendChild(b);
+  });
+  c.appendChild(row2); c.appendChild(pic); c.appendChild(out);
+  out.innerHTML = 'Choose a test to run.';
+  pic.innerHTML = svgBox(300, 160, '<path d="M110,20 L190,20 L178,130 Q150,142 122,130 Z" class="dbox"/>', 300);
+  return c;
+}
+
+function labStates(){
+  var c = labCard('Heat and the particles',
+    'Move the temperature and watch what the particles do. This is the picture behind melting, boiling and evaporation.');
+  var t = 25, pic = el('div'), out = el('div','labout');
+  function draw(){
+    var state = t <= 0 ? 'solid' : (t < 100 ? 'liquid' : 'gas');
+    var pts = [], cls, i;
+    if (state === 'solid'){ for (i = 0; i < 24; i++) pts.push([42 + (i % 8) * 28, 40 + Math.floor(i / 8) * 26]); cls = 'dp-solid'; }
+    else if (state === 'liquid'){ for (i = 0; i < 20; i++) pts.push([40 + (i % 7) * 32 + (i % 2 ? 8 : 0), 58 + Math.floor(i / 7) * 26]); cls = 'dp-liq'; }
+    else { for (i = 0; i < 12; i++) pts.push([36 + ((i * 53) % 220), 28 + ((i * 37) % 86)]); cls = 'dp-gas'; }
+    var body = '<rect x="16" y="14" width="268" height="112" rx="8" class="dbox"/>';
+    for (i = 0; i < pts.length; i++)
+      body += '<circle cx="' + pts[i][0] + '" cy="' + pts[i][1] + '" r="7" class="dsolidpt ' + cls +
+              '" style="animation-delay:-' + ((i % 9) * 0.23).toFixed(2) + 's"/>';
+    body += '<text x="150" y="146" class="dmut" text-anchor="middle">' + t + ' °C — ' + state.toUpperCase() + '</text>';
+    pic.innerHTML = svgBox(300, 160, body, 320);
+    var says = state === 'solid'
+      ? 'Fixed shape and volume. The particles are packed in a pattern and only vibrate.'
+      : (state === 'liquid'
+         ? 'Fixed volume, no fixed shape. The particles touch but slide past one another. Some escape at the surface — that is evaporation.'
+         : 'No fixed shape or volume. The particles are far apart and move fast, so a gas fills its container and can be compressed.');
+    out.innerHTML = says + '<br><span style="color:var(--ink-2)">Water melts at 0 °C and boils at 100 °C. '
+      + 'Heating gives the particles energy; cooling takes it away.</span>';
+  }
+  slider(c, 'Temperature °C', -20, 140, t, 5, function(v){ t = v; draw(); });
+  c.appendChild(pic); c.appendChild(out); draw();
+  return c;
+}
+
+function labPhoto(){
+  var c = labCard('Photosynthesis rate',
+    'Change the light, the carbon dioxide and the water, and count the oxygen bubbles. One factor always holds the rate back.');
+  var light = 60, co2 = 60, water = 80, pic = el('div'), out = el('div','labout');
+  function draw(){
+    var rate = Math.min(light, co2, water);
+    var limiting = (rate === light ? 'light' : (rate === co2 ? 'carbon dioxide' : 'water'));
+    var bubbles = Math.round(rate / 10);
+    var body = '<path d="M96,140 C96,86 138,60 192,60 C192,114 150,140 96,140 Z" class="dfill"/>'
+             + '<path d="M96,140 L192,60" class="dacc"/>'
+             + '<circle cx="40" cy="36" r="17" class="dfill dpulse"/>'
+             + '<text x="40" y="70" class="dmut" text-anchor="middle">light</text>';
+    for (var i = 0; i < bubbles; i++)
+      body += '<circle cx="' + (170 + (i % 5) * 16) + '" cy="' + (54 - Math.floor(i / 5) * 10) +
+              '" r="5" class="dsolidpt drise" style="animation-delay:-' + (i * 0.35).toFixed(2) + 's"/>';
+    body += '<text x="150" y="162" class="dmut" text-anchor="middle">' + bubbles + ' bubbles of oxygen per minute</text>';
+    pic.innerHTML = svgBox(300, 175, body, 330);
+    out.innerHTML = 'Rate = <b>' + rate + '%</b> of the maximum.<br>'
+      + 'The <b>limiting factor</b> is <b>' + limiting + '</b> — raising anything else changes nothing until you raise that.'
+      + '<br><span style="color:var(--ink-2)">carbon dioxide + water → glucose + oxygen, in light, using chlorophyll.</span>';
+  }
+  slider(c, 'Light %', 0, 100, light, 10, function(v){ light = v; draw(); });
+  slider(c, 'Carbon dioxide %', 0, 100, co2, 10, function(v){ co2 = v; draw(); });
+  slider(c, 'Water %', 0, 100, water, 10, function(v){ water = v; draw(); });
+  c.appendChild(pic); c.appendChild(out); draw();
+  return c;
+}
+
+function labRays(){
+  var c = labCard('Light: reflection &amp; refraction',
+    'Swing the incoming ray. The reflected ray always matches it — and the refracted ray bends towards the normal in water.');
+  var ang = 40, pic = el('div'), out = el('div','labout');
+  function draw(){
+    var a = ang * Math.PI / 180, L = 92, cx = 150, cy = 108;
+    var ix = cx - L * Math.sin(a), iy = cy - L * Math.cos(a);
+    var rx = cx + L * Math.sin(a), ry = cy - L * Math.cos(a);
+    var rr = Math.asin(Math.sin(a) / 1.33);
+    var tx = cx + 70 * Math.sin(rr), ty = cy + 70 * Math.cos(rr);
+    var body = '<line x1="22" y1="108" x2="278" y2="108" class="dacc"/>'
+      + '<rect x="22" y="109" width="256" height="40" class="dfill" fill-opacity="0.35"/>'
+      + '<text x="258" y="134" class="dmut" text-anchor="end">water</text>'
+      + '<line x1="' + cx + '" y1="150" x2="' + cx + '" y2="20" class="ddash"/>'
+      + '<text x="' + (cx + 26) + '" y="26" class="dmut">normal</text>'
+      + '<line x1="' + ix.toFixed(1) + '" y1="' + iy.toFixed(1) + '" x2="' + cx + '" y2="' + cy +
+        '" class="dline dmarch" marker-end="url(#ah)"/>'
+      + '<line x1="' + cx + '" y1="' + cy + '" x2="' + rx.toFixed(1) + '" y2="' + ry.toFixed(1) +
+        '" class="dacc dmarch" marker-end="url(#ah)"/>'
+      + '<line x1="' + cx + '" y1="' + cy + '" x2="' + tx.toFixed(1) + '" y2="' + ty.toFixed(1) +
+        '" class="dline ddash" marker-end="url(#ah)"/>'
+      + '<text x="' + (cx - 44) + '" y="' + (cy - 44) + '" class="dtxt">i = ' + ang + '°</text>'
+      + '<text x="' + (cx + 44) + '" y="' + (cy - 44) + '" class="dtxt">r = ' + ang + '°</text>'
+      + '<text x="' + (cx + 52) + '" y="' + (cy + 60) + '" class="dmut">' +
+        Math.round(rr * 180 / Math.PI) + '° in water</text>';
+    pic.innerHTML = '<svg viewBox="0 0 300 180" class="dia" style="width:100%;max-width:330px">'
+      + '<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5.5" markerHeight="5.5" '
+      + 'orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="dah"/></marker></defs>' + body + '</svg>';
+    out.innerHTML = 'Angle of incidence <b>' + ang + '°</b> = angle of reflection <b>' + ang + '°</b>.<br>'
+      + 'Entering water the ray slows and bends <b>towards</b> the normal, to about <b>'
+      + Math.round(rr * 180 / Math.PI) + '°</b>.'
+      + '<br><span style="color:var(--ink-2)">That bending is why a stick in water looks broken and a pool looks shallow.</span>';
+  }
+  slider(c, 'Angle of incidence', 5, 85, ang, 5, function(v){ ang = v; draw(); });
+  c.appendChild(pic); c.appendChild(out); draw();
+  return c;
+}
+
+function labPlot(){
+  var c = labCard('Graph plotter',
+    'Move the coefficients and watch the line or the curve answer back — gradient, intercepts, roots and the turning point.');
+  var kind = 'line', m = 2, k = -1, a = 1, b = -2, cc = -3;
+  var pic = el('div'), out = el('div','labout'), rows = el('div');
+  function sx(x){ return 20 + (x + 6) * (300 - 40) / 12; }
+  function sy(y){ return 170 - (y + 8) * (320 - 40) / 20; }
+  function draw(){
+    var body = '', x, y, d = '', first = true;
+    for (x = -6; x <= 6; x += 0.25){
+      y = (kind === 'line') ? (m * x + k) : (a * x * x + b * x + cc);
+      if (y < -8 || y > 12) { first = true; continue; }
+      d += (first ? 'M' : 'L') + sx(x).toFixed(1) + ',' + sy(y).toFixed(1) + ' ';
+      first = false;
+    }
+    for (x = -6; x <= 6; x += 2)
+      body += '<line x1="' + sx(x).toFixed(1) + '" y1="' + sy(-8) + '" x2="' + sx(x).toFixed(1) +
+              '" y2="' + sy(12) + '" class="gg"/>'
+            + '<text x="' + sx(x).toFixed(1) + '" y="' + (sy(0) + 13).toFixed(1) +
+              '" class="gt" text-anchor="middle">' + (x ? String(x).replace('-', '−') : '') + '</text>';
+    for (y = -8; y <= 12; y += 4)
+      body += '<line x1="' + sx(-6) + '" y1="' + sy(y).toFixed(1) + '" x2="' + sx(6) +
+              '" y2="' + sy(y).toFixed(1) + '" class="gg"/>'
+            + '<text x="' + (sx(0) - 6).toFixed(1) + '" y="' + (sy(y) + 3.5).toFixed(1) +
+              '" class="gt" text-anchor="end">' + (y ? String(y).replace('-', '−') : '') + '</text>';
+    body += '<line x1="' + sx(-6) + '" y1="' + sy(0) + '" x2="' + sx(6) + '" y2="' + sy(0) + '" class="ga"/>'
+          + '<line x1="' + sx(0) + '" y1="' + sy(-8) + '" x2="' + sx(0) + '" y2="' + sy(12) + '" class="ga"/>'
+          + '<path d="' + d + '" class="gc"/>';
+    var txt;
+    if (kind === 'line'){
+      body += '<circle cx="' + sx(0) + '" cy="' + sy(k).toFixed(1) + '" r="4" class="gp"/>';
+      var xint = m ? (-k / m) : null;
+      if (xint !== null && xint >= -6 && xint <= 6)
+        body += '<circle cx="' + sx(xint).toFixed(1) + '" cy="' + sy(0) + '" r="4" class="gp"/>';
+      txt = 'y = ' + m + 'x ' + (k < 0 ? '− ' + Math.abs(k) : '+ ' + k) + '<br>'
+          + 'gradient <b>' + m + '</b> (up ' + m + ' for every 1 across)<br>'
+          + 'cuts the y-axis at <b>(0, ' + k + ')</b>'
+          + (xint !== null ? ' and the x-axis at <b>(' + (Math.round(xint * 100) / 100) + ', 0)</b>' : '');
+    } else {
+      var disc = b * b - 4 * a * cc;
+      var vx = -b / (2 * a), vy = a * vx * vx + b * vx + cc;
+      body += '<circle cx="' + sx(vx).toFixed(1) + '" cy="' + sy(vy).toFixed(1) + '" r="4" class="gp"/>';
+      txt = 'y = ' + a + 'x² ' + (b < 0 ? '− ' + Math.abs(b) : '+ ' + b) + 'x '
+          + (cc < 0 ? '− ' + Math.abs(cc) : '+ ' + cc) + '<br>'
+          + 'b² − 4ac = <b>' + disc + '</b> → ';
+      if (disc > 0){
+        var r1 = (-b - Math.sqrt(disc)) / (2 * a), r2 = (-b + Math.sqrt(disc)) / (2 * a);
+        txt += 'two roots: <b>x = ' + (Math.round(r1 * 100) / 100) + '</b> and <b>x = ' + (Math.round(r2 * 100) / 100) + '</b>';
+        [r1, r2].forEach(function(r){
+          if (r >= -6 && r <= 6) body += '<circle cx="' + sx(r).toFixed(1) + '" cy="' + sy(0) + '" r="4" class="gp"/>';
+        });
+      } else if (disc === 0){ txt += 'one repeated root at <b>x = ' + (Math.round(vx * 100) / 100) + '</b>'; }
+      else { txt += '<b>no real roots</b> — the curve misses the x-axis'; }
+      txt += '<br>turning point <b>(' + (Math.round(vx * 100) / 100) + ', ' + (Math.round(vy * 100) / 100) + ')</b>, '
+          + (a > 0 ? 'a minimum (curve opens upwards)' : 'a maximum (curve opens downwards)');
+    }
+    pic.innerHTML = '<svg viewBox="0 0 300 190" class="graph" style="width:100%;max-width:340px">' + body + '</svg>';
+    out.innerHTML = txt;
+  }
+  function controls(){
+    rows.innerHTML = '';
+    if (kind === 'line'){
+      slider(rows, 'gradient m', -5, 5, m, 1, function(v){ m = v; draw(); });
+      slider(rows, 'intercept c', -6, 6, k, 1, function(v){ k = v; draw(); });
+    } else {
+      slider(rows, 'a', -3, 3, a, 1, function(v){ a = v || 1; draw(); });
+      slider(rows, 'b', -6, 6, b, 1, function(v){ b = v; draw(); });
+      slider(rows, 'c', -8, 8, cc, 1, function(v){ cc = v; draw(); });
+    }
+  }
+  var seg = el('div','seg');
+  [['line','Straight line'], ['quad','Quadratic']].forEach(function(p){
+    var btn = el('button', null, p[1]); btn.type = 'button';
+    btn.setAttribute('aria-pressed', kind === p[0] ? 'true' : 'false');
+    btn.addEventListener('click', function(){
+      kind = p[0];
+      var kids = seg.children;
+      for (var i = 0; i < kids.length; i++) kids[i].setAttribute('aria-pressed','false');
+      btn.setAttribute('aria-pressed','true');
+      controls(); draw();
+    });
+    seg.appendChild(btn);
+  });
+  var top = el('div','labrow'); top.appendChild(seg);
+  c.appendChild(top); c.appendChild(rows); c.appendChild(pic); c.appendChild(out);
+  controls(); draw();
+  return c;
+}

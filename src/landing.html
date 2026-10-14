@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Halo Study — BECE &amp; WASSCE practice</title>
+<meta name="description" content="Free BECE and WASSCE practice for Ghana: 1,780 original questions with step-by-step worked solutions, plain-English notes, diagrams, timed mock papers and a hands-on Lab. Works offline, no sign-in.">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#F7F2E7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0B0C0F" media="(prefers-color-scheme: dark)">
+<meta name="author" content="Bismark Arko-Ofori">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Halo Study — BECE &amp; WASSCE practice">
+<meta property="og:description" content="1,780 original practice questions with worked solutions, mock papers and a hands-on Lab. Free, offline, no sign-in.">
+<meta property="og:image" content="share.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --paper:#F7F2E7; --card:#FFFDF8; --panel:#F1EADA; --ink:#17140E; --ink-2:#6B6252;
+  --rule:#DED3BC; --grid:#EBE3D2; --graphite:#1B1812;
+  --gold:#D99B16; --gold-2:#F0C24E; --accent:#9A6B06; --accent-soft:#F7EBCD;
+  --bece:#146B4C; --wassce:#A2352B;
+  --shadow:0 1px 2px rgba(23,20,14,.06), 0 14px 32px -22px rgba(23,20,14,.45);
+  --kente:repeating-linear-gradient(90deg, var(--gold-2) 0 13px, var(--graphite) 13px 19px,
+     #C2402D 19px 29px, var(--graphite) 29px 35px, #1F9E6B 35px 45px, var(--graphite) 45px 51px);
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --paper:#0B0C0F; --card:#15171C; --panel:#101217; --ink:#F2EDE1; --ink-2:#9A9484;
+    --rule:#2A2C34; --grid:#13151A; --graphite:#0B0C0F; --accent:#F0C24E; --accent-soft:#2A2109;
+    --bece:#2BB47B; --wassce:#FF8E7A;
+    --shadow:0 1px 2px rgba(0,0,0,.6), 0 18px 40px -26px rgba(0,0,0,.95);
+    --kente:repeating-linear-gradient(90deg, #F0C24E 0 13px, #0B0C0F 13px 19px,
+       #D4452F 19px 29px, #0B0C0F 29px 35px, #2BB47B 35px 45px, #0B0C0F 45px 51px);
+  }
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0; background:var(--paper); color:var(--ink); font-size:16px; line-height:1.6;
+  font-family:"Space Grotesk",system-ui,-apple-system,Segoe UI,sans-serif;
+  background-image:radial-gradient(110% 60% at 50% -6%, var(--accent-soft), transparent 58%),
+    linear-gradient(var(--grid) 1px,transparent 1px), linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:auto, 30px 30px, 30px 30px; background-attachment:fixed, scroll, scroll;
+  padding-top:env(safe-area-inset-top,0px)}
+h1,h2,h3{font-family:"Fraunces",Georgia,serif; margin:0; letter-spacing:-.015em; text-wrap:balance}
+a{color:var(--accent)}
+.band{height:5px; background:var(--kente)}
+.wrap{max-width:1040px; margin:0 auto; padding:0 18px 64px}
+header{display:flex; align-items:center; gap:11px; padding:20px 0 6px}
+.mark{width:34px; height:34px; border-radius:10px; flex:none;
+  background:linear-gradient(135deg,var(--gold-2),var(--gold)); position:relative;
+  box-shadow:0 0 0 3px var(--accent-soft)}
+.mark:after{content:""; position:absolute; inset:9px; border-radius:50%; border:3px solid rgba(27,24,18,.85)}
+.brand{font-family:"Fraunces",Georgia,serif; font-weight:700; font-size:20px; letter-spacing:-.01em}
+.brand small{display:block; font-family:"Space Grotesk",sans-serif; font-size:11px; font-weight:600;
+  letter-spacing:.14em; text-transform:uppercase; color:var(--ink-2); margin-top:1px}
+.hero{padding:26px 0 8px}
+.hero h1{font-size:clamp(30px,6vw,46px); line-height:1.08}
+.hero p{font-size:clamp(15px,2.2vw,18px); color:var(--ink-2); max-width:60ch; margin:14px 0 0}
+.counts{display:flex; flex-wrap:wrap; gap:9px; margin:20px 0 0}
+.count{border:1px solid var(--rule); border-radius:999px; background:var(--card); padding:7px 15px; font-size:13px}
+.count b{font-family:"IBM Plex Mono",monospace; color:var(--accent)}
+.resume{display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin:22px 0 0; padding:14px 17px;
+  border:1px solid var(--accent); border-radius:14px; background:var(--accent-soft); font-size:14px}
+.pick{display:grid; grid-template-columns:repeat(auto-fit,minmax(290px,1fr)); gap:16px; margin:26px 0 0}
+.lvl{position:relative; display:block; text-decoration:none; color:inherit; background:var(--card);
+  border:1px solid var(--rule); border-radius:20px; padding:24px 22px 22px; overflow:hidden;
+  box-shadow:var(--shadow); transition:transform .18s, border-color .18s, box-shadow .18s}
+.lvl:before{content:""; position:absolute; left:0; right:0; top:0; height:5px; background:var(--c)}
+.lvl:hover{transform:translateY(-4px); border-color:var(--c); box-shadow:0 18px 40px -22px var(--c)}
+.lvl .tagrow{display:flex; align-items:center; gap:9px}
+.tag{font-size:10.5px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--c);
+  border:1px solid var(--c); border-radius:999px; padding:3px 11px}
+.lvl h2{font-size:27px; margin:11px 0 2px}
+.lvl .who{font-size:13.5px; color:var(--ink-2)}
+.lvl ul{list-style:none; margin:15px 0 0; padding:0; display:flex; flex-wrap:wrap; gap:6px}
+.lvl li{font-size:12.5px; border:1px solid var(--rule); border-radius:999px; padding:4px 11px; background:var(--panel)}
+.lvl .nums{display:flex; gap:18px; margin:17px 0 0; font-family:"IBM Plex Mono",monospace; font-size:13px; color:var(--ink-2)}
+.lvl .nums b{display:block; font-size:22px; color:var(--ink); font-weight:500}
+.lvl .go{display:inline-flex; align-items:center; gap:8px; margin-top:19px; border-radius:999px;
+  background:linear-gradient(135deg,var(--gold-2),var(--gold)); color:#1B1812; padding:11px 22px;
+  font-weight:700; font-size:14px; box-shadow:0 10px 24px -14px rgba(217,155,22,.9)}
+.feat{display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:14px; margin:34px 0 0}
+.f{border:1px solid var(--rule); border-radius:16px; background:var(--card); padding:16px}
+.f h3{font-size:16px; margin-bottom:5px}
+.f p{margin:0; font-size:13.5px; color:var(--ink-2)}
+.f .ic{font-size:20px; margin-bottom:7px}
+.strip{margin:34px 0 0; padding:18px 20px; border:1px dashed var(--accent); border-radius:16px;
+  background:var(--accent-soft); font-size:14px}
+footer{border-top:1px solid var(--rule); margin-top:38px; padding:22px 0 0; font-size:12.5px; color:var(--ink-2)}
+footer a{font-weight:600; text-decoration:none}
+@media (prefers-reduced-motion:reduce){*{transition:none!important; animation:none!important}}
+</style>
+</head>
+<body>
+<div class="band"></div>
+<div class="wrap">
+
+<header>
+  <div class="mark"></div>
+  <div class="brand">Halo Study<small>Ghana · BECE &amp; WASSCE</small></div>
+</header>
+
+<section class="hero">
+  <h1>Practice that shows you every step.</h1>
+  <p>Original questions written to the Ghanaian syllabus, each with the working revealed one step at a
+     time — plus plain-English notes, labelled diagrams, timed mock papers and a hands-on Lab.
+     Free, works offline, and no sign-in.</p>
+  <div class="counts">
+    <span class="count"><b>1,780</b> questions</span>
+    <span class="count"><b>278</b> topics</span>
+    <span class="count"><b>10</b> subjects</span>
+    <span class="count"><b>331</b> syllabus items mapped</span>
+    <span class="count"><b>9</b> Lab tools</span>
+  </div>
+  <div class="resume" id="resume" hidden>
+    <span id="resumeTxt"></span>
+    <a class="go" id="resumeGo" href="#" style="display:inline-flex;align-items:center;gap:8px;border-radius:999px;
+       background:linear-gradient(135deg,var(--gold-2),var(--gold));color:#1B1812;padding:9px 18px;
+       font-weight:700;font-size:13.5px;text-decoration:none">Continue →</a>
+  </div>
+</section>
+
+<section class="pick">
+  <a class="lvl" id="pickBece" href="bece.html" style="--c:var(--bece)">
+    <div class="tagrow"><span class="tag">JHS · Basic</span></div>
+    <h2>BECE</h2>
+    <div class="who">Basic Education Certificate Examination — for JHS 1 to JHS 3.</div>
+    <ul>
+      <li>Mathematics</li><li>English Language</li><li>Integrated Science</li>
+      <li>Social Studies</li><li>R.M.E.</li><li>Computing</li>
+    </ul>
+    <div class="nums">
+      <span><b>894</b>questions</span>
+      <span><b>149</b>topics</span>
+      <span><b>6</b>subjects</span>
+    </div>
+    <span class="go">Start BECE practice →</span>
+  </a>
+
+  <a class="lvl" id="pickWassce" href="wassce.html" style="--c:var(--wassce)">
+    <div class="tagrow"><span class="tag">SHS · Core</span></div>
+    <h2>WASSCE</h2>
+    <div class="who">West African Senior School Certificate Examination — the four core subjects.</div>
+    <ul>
+      <li>Core Mathematics</li><li>English Language</li>
+      <li>Integrated Science</li><li>Social Studies</li>
+    </ul>
+    <div class="nums">
+      <span><b>886</b>questions</span>
+      <span><b>129</b>topics</span>
+      <span><b>4</b>subjects</span>
+    </div>
+    <span class="go">Start WASSCE practice →</span>
+  </a>
+</section>
+
+<section class="feat">
+  <div class="f"><div class="ic">◆</div><h3>Steps, one at a time</h3>
+    <p>Every solution unfolds step by step, so you can stop where you were stuck instead of reading the answer.</p></div>
+  <div class="f"><div class="ic">◆</div><h3>The whole syllabus, mapped</h3>
+    <p>Each syllabus line links to the topic that covers it, with its own notes, worked examples and questions.</p></div>
+  <div class="f"><div class="ic">◆</div><h3>Timed mock papers</h3>
+    <p>Paper 1 in the real shape and the real time, marked the moment you submit, with the weak topics named.</p></div>
+  <div class="f"><div class="ic">◆</div><h3>The Lab</h3>
+    <p>Nine hands-on tools: number line, fraction bars, Venn builder, probability spinner, circuits, binary and more.</p></div>
+  <div class="f"><div class="ic">◆</div><h3>Points, ranks and streaks</h3>
+    <p>Answer a few questions a day, keep the streak alive, and climb from Recruit to Legend.</p></div>
+  <div class="f"><div class="ic">◆</div><h3>Works without data</h3>
+    <p>After the first visit everything runs offline, and progress is kept in your own browser only.</p></div>
+</section>
+
+<section class="strip">
+  <b>About the questions.</b> These are original practice questions written to the Ghanaian syllabus and to
+  the format of each paper. They are <b>not</b> reproductions of past BECE or WASSCE papers — for those, use
+  WAEC's own e-learning portal and the past-question booklets sold by WAEC Ghana. Every computable answer in
+  the mathematics and science banks is checked automatically when the app is built.
+</section>
+
+<footer>
+  <p><a href="bece.html">BECE</a> · <a href="wassce.html">WASSCE</a> — your progress is stored only in this
+  browser, and the two levels are kept separately. Nothing is uploaded anywhere.</p>
+  <p>Halo Study · built in Ghana by Bismark Arko-Ofori.</p>
+</footer>
+
+</div>
+<script>
+(function(){
+  var K = 'halo-study-level';
+  var names = {bece:'BECE', wassce:'WASSCE'};
+  function remember(v){ try { localStorage.setItem(K, v); } catch(e){} }
+  var b = document.getElementById('pickBece'), w = document.getElementById('pickWassce');
+  b.addEventListener('click', function(){ remember('bece'); });
+  w.addEventListener('click', function(){ remember('wassce'); });
+  var last = null;
+  try { last = localStorage.getItem(K); } catch(e){}
+  if (last && names[last]){
+    var box = document.getElementById('resume');
+    document.getElementById('resumeTxt').innerHTML =
+      'You were practising for the <b>' + names[last] + '</b> last time.';
+    var go = document.getElementById('resumeGo');
+    go.href = last + '.html';
+    go.textContent = 'Continue ' + names[last] + ' →';
+    box.hidden = false;
+  }
+  if ('serviceWorker' in navigator){
+    window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });
+  }
+})();
+</script>
+</body>
+</html>
